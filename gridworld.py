@@ -1,5 +1,6 @@
 from agent import Agent, QLearner
 import random
+import numpy as np
 
 
 class GridWorld:
@@ -23,7 +24,7 @@ class GridWorld:
 
             self.targets.append([x, y])
 
-        a_loc = []
+        a_loc = []  # Agent locations
         for a in range(n_agents):
             x = random.randint(0, self.width-1)
             y = random.randint(0, self.height-1)
@@ -76,3 +77,21 @@ class GridWorld:
             return self.reward, [x, y]
         else:
             return 0, [x, y]
+
+    def calculate_g_reward(self):
+        """
+        Calculate the global reward for the team of agents
+        """
+        global_reward = 0
+
+        target_capture_counter = np.zeros(len(self.targets))
+        for id, loc in enumerate(self.targets):
+            for ag in self.agents:
+                if loc == self.agents[ag].loc:
+                    target_capture_counter[id] += 1
+
+        for tcount in target_capture_counter:
+            if tcount > 0:
+                global_reward += self.reward
+
+        return global_reward

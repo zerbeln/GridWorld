@@ -36,43 +36,95 @@ def manual_gridworld(gw):
     return solution
 
 
-if __name__ == "__main__":
-    width = 5
-    height = 5
-    n_agents = 1
-    n_targets = 1
-
-    gw = GridWorld(width, height)
-    gw.create_world(n_agents, n_targets)
-
+def q_learning_gridworld(gw, n_agents, n_targets):
+    """
+    Use a standard q-learning approach to solve a multiagent gridworld
+    """
     n_epochs = 500
     n_steps = 15
     for ep in range(n_epochs):
-        gw.agents['A0'].reset_agent()
+        for ag in gw.agents:
+            gw.agents[ag].reset_agent()
+            agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+            gw.agents[ag].set_current_state(agent_state)
 
         for t in range(n_steps):
-            agent_state = gw.agents['A0'].loc[0] + gw.height*gw.agents['A0'].loc[1]
-            action = gw.agents['A0'].get_egreedy_action(agent_state)
-            reward, gw.agents['A0'].loc = gw.step(gw.agents['A0'].loc, action)
-            next_state = gw.agents['A0'].loc[0] + gw.height*gw.agents['A0'].loc[1]
-            gw.agents['A0'].update_q_val(agent_state, action, next_state, reward)
+            for ag in gw.agents:
+                agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+                gw.agents[ag].action = gw.agents[ag].get_egreedy_action(agent_state)
+                reward, gw.agents[ag].loc = gw.step(gw.agents[ag].loc, gw.agents[ag].action)
+                next_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+                gw.agents[ag].update_state(next_state)
 
-            if reward > 0:
-                break
+                # Update Q-Table
+                gw.agents[ag].update_q_val(reward)
 
-    gw.agents['A0'].reset_agent()
-    solution = []
+                if reward > 0:
+                    break
+
+    # Record agent solutions
+    solution = [[] for ag in range(n_agents)]
+    for ag in gw.agents:
+        gw.agents[ag].reset_agent()
+        agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+        gw.agents[ag].set_current_state(agent_state)
     for t in range(n_steps):
-        agent_state = gw.agents['A0'].loc[0] + gw.height * gw.agents['A0'].loc[1]
-        action = gw.agents['A0'].get_greedy_action(agent_state)
-        solution.append(action)
-        reward, gw.agents['A0'].loc = gw.step(gw.agents['A0'].loc, action)
-        next_state = gw.agents['A0'].loc[0] + gw.height * gw.agents['A0'].loc[1]
-        gw.agents['A0'].update_q_val(agent_state, action, next_state, reward)
-
-        if reward > 0:
-            break
+        for ag in range(n_agents):
+            agent_state = gw.agents[f'A{ag}'].loc[0] + gw.height * gw.agents[f'A{ag}'].loc[1]
+            gw.agents[f'A{ag}'].action = gw.agents[f'A{ag}'].get_greedy_action(agent_state)
+            solution[ag].append(gw.agents[f'A{ag}'].action)
+            reward, gw.agents[f'A{ag}'].loc = gw.step(gw.agents[f'A{ag}'].loc, gw.agents[f'A{ag}'].action)
+            next_state = gw.agents[f'A{ag}'].loc[0] + gw.height * gw.agents[f'A{ag}'].loc[1]
+            gw.agents[f'A{ag}'].update_state(next_state)
 
     print("Agent Start Position: ", gw.agents['A0'].initial_position)
     print("Target Location: ", gw.targets[0])
     print("Solution: ", solution)
+
+
+if __name__ == "__main__":
+    width = 10
+    height = 10
+    n_agents = 6
+    n_targets = 6
+
+    gw = GridWorld(width, height)
+    gw.create_world(n_agents, n_targets)
+
+    n_epochs = 100
+    n_steps = 15
+
+    for ep in range(n_epochs):
+        for ag in gw.agents:
+            gw.agents[ag].reset_agent()
+            agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+            gw.agents[ag].set_current_state(agent_state)
+
+        # Agents choose actions for pre-determined number of time steps
+        for t in range(n_steps):
+            for ag in gw.agents:
+                agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+                gw.agents[ag].action = gw.agents[ag].get_egreedy_action(agent_state)
+                step_reward, gw.agents[ag].loc = gw.step(gw.agents[ag].loc, gw.agents[ag].action)
+                next_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+                gw.agents[ag].update_state(next_state)
+
+            g_reward = gw.calculate_g_reward()
+            # Update Agent Q-Tables
+            for ag in gw.agents:
+                gw.agents[ag].update_q_val(g_reward)
+
+    # Record agent solutions
+    solution = [[] for ag in range(n_agents)]
+    for ag in gw.agents:
+        gw.agents[ag].reset_agent()
+        agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+        gw.agents[ag].set_current_state(agent_state)
+    for t in range(n_steps):
+        for ag in range(n_agents):
+            agent_state = gw.agents[f'A{ag}'].loc[0] + gw.height * gw.agents[f'A{ag}'].loc[1]
+            gw.agents[f'A{ag}'].action = gw.agents[f'A{ag}'].get_greedy_action(agent_state)
+            solution[ag].append(gw.agents[f'A{ag}'].action)
+            reward, gw.agents[f'A{ag}'].loc = gw.step(gw.agents[f'A{ag}'].loc, gw.agents[f'A{ag}'].action)
+            next_state = gw.agents[f'A{ag}'].loc[0] + gw.height * gw.agents[f'A{ag}'].loc[1]
+            gw.agents[f'A{ag}'].update_state(next_state)

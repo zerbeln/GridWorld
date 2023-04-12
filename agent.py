@@ -25,16 +25,33 @@ class QLearner(Agent):
         self.alpha = 0.1
         self.epsilon = 0.1
         self.q_table = np.zeros((n_states, len(self.actions)))
+        self.current_state = None
+        self.prev_state = None
+        self.action = None
 
-    def update_q_val(self, state, action, next_state, reward):
+    def set_current_state(self, state):
+        """
+        Set agents current state after resetting for new epoch
+        """
+        self.prev_state = None
+        self.current_state = state
+
+    def update_state(self, new_state):
+        """
+        Updates the agents current and previous states after taking an action
+        """
+        self.prev_state = self.current_state
+        self.current_state = new_state
+
+    def update_q_val(self, reward):
         """
         Update q-values after a state transition
         """
-        q_val = self.q_table[state, action]
-        max_q = np.max(self.q_table[next_state])
+        q_val = self.q_table[self.prev_state, self.action]
+        max_q = np.max(self.q_table[self.current_state])
 
         new_q = q_val + self.alpha*(reward + self.discount*max_q - q_val)
-        self.q_table[state, action] = new_q
+        self.q_table[self.prev_state, self.action] = new_q
 
     def get_egreedy_action(self, state):
         """
