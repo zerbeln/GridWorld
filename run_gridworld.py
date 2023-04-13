@@ -1,10 +1,18 @@
 from gridworld import GridWorld
+from difference_reward import calc_difference_reward
 
 
-def manual_gridworld(gw):
+def manual_gridworld():
     """
-    This is a manually written gridworld solver to test environmental mechanics
+    This is a manually written gridworld solver to test environmental mechanics (for a single agent gridworld)
     """
+    width = 5
+    height = 5
+    n_agents = 1
+    n_targets = 1
+
+    gw = GridWorld(width, height)
+    gw.create_world(n_agents, n_targets)
 
     # Testing environment mechanics with manual strategy
     x_dist = gw.targets[0][0] - gw.agents['A0'].loc[0]
@@ -36,12 +44,10 @@ def manual_gridworld(gw):
     return solution
 
 
-def q_learning_gridworld(gw, n_agents, n_targets):
+def q_learning_gridworld(gw, n_agents, n_targets, n_epochs, n_steps):
     """
     Use a standard q-learning approach to solve a multiagent gridworld
     """
-    n_epochs = 500
-    n_steps = 15
     for ep in range(n_epochs):
         for ag in gw.agents:
             gw.agents[ag].reset_agent()
@@ -82,18 +88,10 @@ def q_learning_gridworld(gw, n_agents, n_targets):
     print("Solution: ", solution)
 
 
-if __name__ == "__main__":
-    width = 10
-    height = 10
-    n_agents = 6
-    n_targets = 6
-
-    gw = GridWorld(width, height)
-    gw.create_world(n_agents, n_targets)
-
-    n_epochs = 100
-    n_steps = 15
-
+def gridworld_global(gw, n_agents, n_targets, n_epochs, n_steps):
+    """
+    Train multiagent team on Gridworld using global reward as feedback
+    """
     for ep in range(n_epochs):
         for ag in gw.agents:
             gw.agents[ag].reset_agent()
@@ -105,7 +103,7 @@ if __name__ == "__main__":
             for ag in gw.agents:
                 agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
                 gw.agents[ag].action = gw.agents[ag].get_egreedy_action(agent_state)
-                step_reward, gw.agents[ag].loc = gw.step(gw.agents[ag].loc, gw.agents[ag].action)
+                l_reward, gw.agents[ag].loc = gw.step(gw.agents[ag].loc, gw.agents[ag].action)
                 next_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
                 gw.agents[ag].update_state(next_state)
 
@@ -125,6 +123,68 @@ if __name__ == "__main__":
             agent_state = gw.agents[f'A{ag}'].loc[0] + gw.height * gw.agents[f'A{ag}'].loc[1]
             gw.agents[f'A{ag}'].action = gw.agents[f'A{ag}'].get_greedy_action(agent_state)
             solution[ag].append(gw.agents[f'A{ag}'].action)
-            reward, gw.agents[f'A{ag}'].loc = gw.step(gw.agents[f'A{ag}'].loc, gw.agents[f'A{ag}'].action)
+            l_reward, gw.agents[f'A{ag}'].loc = gw.step(gw.agents[f'A{ag}'].loc, gw.agents[f'A{ag}'].action)
             next_state = gw.agents[f'A{ag}'].loc[0] + gw.height * gw.agents[f'A{ag}'].loc[1]
             gw.agents[f'A{ag}'].update_state(next_state)
+
+
+def gridworld_difference(gw, n_agents, n_targets, n_epochs, n_steps):
+    """
+    Train multiagent team on Gridworld using difference reward as feedback
+    """
+    for ep in range(n_epochs):
+        for ag in gw.agents:
+            gw.agents[ag].reset_agent()
+            agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+            gw.agents[ag].set_current_state(agent_state)
+
+        # Agents choose actions for pre-determined number of time steps
+        for t in range(n_steps):
+            for ag in gw.agents:
+                agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+                gw.agents[ag].action = gw.agents[ag].get_egreedy_action(agent_state)
+                l_reward, gw.agents[ag].loc = gw.step(gw.agents[ag].loc, gw.agents[ag].action)
+                next_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+                gw.agents[ag].update_state(next_state)
+
+            g_reward = gw.calculate_g_reward()
+            d_reward = calc_difference_reward(g_reward, gw)
+            # Update Agent Q-Tables
+            for ag in range(n_agents):
+                gw.agents[f'A{ag}'].update_q_val(d_reward[ag])
+
+    # Record agent solutions
+    solution = [[] for ag in range(n_agents)]
+    for ag in gw.agents:
+        gw.agents[ag].reset_agent()
+        agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+        gw.agents[ag].set_current_state(agent_state)
+    for t in range(n_steps):
+        for ag in range(n_agents):
+            agent_state = gw.agents[f'A{ag}'].loc[0] + gw.height * gw.agents[f'A{ag}'].loc[1]
+            gw.agents[f'A{ag}'].action = gw.agents[f'A{ag}'].get_greedy_action(agent_state)
+            solution[ag].append(gw.agents[f'A{ag}'].action)
+            l_reward, gw.agents[f'A{ag}'].loc = gw.step(gw.agents[f'A{ag}'].loc, gw.agents[f'A{ag}'].action)
+            next_state = gw.agents[f'A{ag}'].loc[0] + gw.height * gw.agents[f'A{ag}'].loc[1]
+            gw.agents[f'A{ag}'].update_state(next_state)
+
+
+if __name__ == "__main__":
+    width = 10
+    height = 10
+    n_agents = 6
+    n_targets = 6
+    n_epochs = 100
+    n_steps = 15
+
+    gw = GridWorld(width, height)
+    gw.create_world(n_agents, n_targets)
+    
+    # Training with Global Reward
+    # gridworld_global(gw, n_agents, n_targets, n_epochs, n_steps)
+
+    # Training with Difference Reward
+    gridworld_difference(gw, n_agents, n_targets, n_epochs, n_steps)
+
+    # TODO: Implement PBRS and CFL
+

@@ -6,7 +6,7 @@ class Agent:
     def __init__(self, x, y):
         self.loc = [x, y]
         self.initial_position = (x, y)
-        self.actions = [0, 1, 2, 3]  # Up, Down, Left, Right
+        self.actions = [0, 1, 2, 3, 4]  # Up, Down, Left, Right, Stationary
 
     def reset_agent(self):
         """
@@ -21,9 +21,9 @@ class QLearner(Agent):
         super().__init__(x, y)
         self.n_states = n_states
         self.n_actions = len(self.actions)
-        self.discount = 0.9
-        self.alpha = 0.1
-        self.epsilon = 0.1
+        self.discount = 0.9  # Discount factor (gamma)
+        self.alpha = 0.1  # Learning rate
+        self.epsilon = 0.1  # e-greedy
         self.q_table = np.zeros((n_states, len(self.actions)))
         self.current_state = None
         self.prev_state = None

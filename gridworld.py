@@ -1,4 +1,4 @@
-from agent import Agent, QLearner
+from agent import QLearner
 import random
 import numpy as np
 
@@ -39,7 +39,7 @@ class GridWorld:
 
     def check_collision(self, x, y):
         """
-        Check collision with world boundaries
+        Check for collision with world boundaries
         """
         if x < 0 or x >= self.width:
             return True
@@ -71,8 +71,10 @@ class GridWorld:
             collision = self.check_collision(x+1, y)
             if not collision:
                 x += 1
+        else:
+            assert(action == 4)  # Else the agent remains stationary
 
-        # Return reward and new agent state
+        # Return local agent reward and new agent state
         if [x, y] in self.targets:
             return self.reward, [x, y]
         else:
@@ -84,12 +86,14 @@ class GridWorld:
         """
         global_reward = 0
 
+        # Count number of agents at a target
         target_capture_counter = np.zeros(len(self.targets))
         for id, loc in enumerate(self.targets):
             for ag in self.agents:
                 if loc == self.agents[ag].loc:
                     target_capture_counter[id] += 1
 
+        # If target has at least one agent, targets increases reward
         for tcount in target_capture_counter:
             if tcount > 0:
                 global_reward += self.reward
