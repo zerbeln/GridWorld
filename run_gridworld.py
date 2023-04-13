@@ -179,7 +179,7 @@ if __name__ == "__main__":
 
     gw = GridWorld(width, height)
     gw.create_world(n_agents, n_targets)
-    
+
     # Training with Global Reward
     # gridworld_global(gw, n_agents, n_targets, n_epochs, n_steps)
 
@@ -187,4 +187,3 @@ if __name__ == "__main__":
     gridworld_difference(gw, n_agents, n_targets, n_epochs, n_steps)
 
     # TODO: Implement PBRS and CFL
-
