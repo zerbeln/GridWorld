@@ -1,5 +1,6 @@
 from gridworld import GridWorld
 from difference_reward import calc_difference_reward
+from pbrs import PBRS
 
 
 def manual_gridworld():
@@ -169,12 +170,62 @@ def gridworld_difference(gw, n_agents, n_targets, n_epochs, n_steps):
             gw.agents[f'A{ag}'].update_state(next_state)
 
 
+def gridworld_pbrs(gw, n_agents, n_targets, n_epochs, n_steps):
+    """
+    Train multiagent team on Gridworld using potential-based reward shaping
+    """
+    agent_pbrs = {f'P{ag}': PBRS(gw.n_states) for ag in range(n_agents)}
+    for ag in agent_pbrs:
+        agent_pbrs[ag].set_potentials(gw)
+    for ep in range(n_epochs):
+        # Reset agents to initial conditions
+        for ag in gw.agents:
+            gw.agents[ag].reset_agent()
+            agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+            gw.agents[ag].set_current_state(agent_state)
+
+        # Agents choose actions for pre-determined number of time steps
+        for t in range(n_steps):
+            for ag in gw.agents:
+                agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+                gw.agents[ag].action = gw.agents[ag].get_egreedy_action(agent_state)
+                l_reward, gw.agents[ag].loc = gw.step(gw.agents[ag].loc, gw.agents[ag].action)
+                next_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+                gw.agents[ag].update_state(next_state)
+
+            # Calculate agent rewards
+            g_reward = gw.calculate_g_reward()
+            for ag in range(n_agents):
+                # Calculate change in potential
+                ag_current_state = gw.agents[f'A{ag}'].current_state  # Current agent state
+                ag_prev_state = gw.agents[f'A{ag}'].prev_state  # Previous agent state
+                delta_phi = agent_pbrs[f'P{ag}'].potential_function(ag_current_state, ag_prev_state)
+
+                # Update Q-table and state potentials
+                gw.agents[f'A{ag}'].update_q_val(g_reward + delta_phi)
+
+    # Record agent solutions
+    solution = [[] for ag in range(n_agents)]
+    for ag in gw.agents:
+        gw.agents[ag].reset_agent()
+        agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+        gw.agents[ag].set_current_state(agent_state)
+    for t in range(n_steps):
+        for ag in range(n_agents):
+            agent_state = gw.agents[f'A{ag}'].loc[0] + gw.height * gw.agents[f'A{ag}'].loc[1]
+            gw.agents[f'A{ag}'].action = gw.agents[f'A{ag}'].get_greedy_action(agent_state)
+            solution[ag].append(gw.agents[f'A{ag}'].action)
+            l_reward, gw.agents[f'A{ag}'].loc = gw.step(gw.agents[f'A{ag}'].loc, gw.agents[f'A{ag}'].action)
+            next_state = gw.agents[f'A{ag}'].loc[0] + gw.height * gw.agents[f'A{ag}'].loc[1]
+            gw.agents[f'A{ag}'].update_state(next_state)
+
+
 if __name__ == "__main__":
-    width = 10
-    height = 10
-    n_agents = 6
-    n_targets = 6
-    n_epochs = 100
+    width = 5
+    height = 5
+    n_agents = 1
+    n_targets = 1
+    n_epochs = 10
     n_steps = 15
 
     gw = GridWorld(width, height)
@@ -184,6 +235,7 @@ if __name__ == "__main__":
     # gridworld_global(gw, n_agents, n_targets, n_epochs, n_steps)
 
     # Training with Difference Reward
-    gridworld_difference(gw, n_agents, n_targets, n_epochs, n_steps)
+    # gridworld_difference(gw, n_agents, n_targets, n_epochs, n_steps)
+    gridworld_pbrs(gw, n_agents, n_targets, n_epochs, n_steps)
 
-    # TODO: Implement PBRS and CFL
+    # TODO: Implement CFL

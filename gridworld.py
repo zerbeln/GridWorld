@@ -7,6 +7,7 @@ class GridWorld:
     def __init__(self, width, height):
         self.width = width
         self.height = height
+        self.n_states = height * width
         self.reward = 100
         self.agents = {}  # Dictionary for agent objects
         self.targets = []  # Coordinates of targets in the Gridworld
