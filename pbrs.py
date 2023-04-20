@@ -18,7 +18,7 @@ class PBRS:
 
         return delta_potential
 
-    def reset_potential(self):
+    def reset_potentials(self):
         """
         Reset the state potential estimates
         """
@@ -49,9 +49,7 @@ class PBRS:
             self._initial_potentials[state] = sum(poi_state_potentials[state])/len(poi_state_potentials[state])
         self.state_potentials = self._initial_potentials.copy()
 
-        print(self._initial_potentials)
-
-    def update_potential(self, reward, state):
+    def update_potentials(self, reward, state):
         """
         Update state potentials
         """

@@ -79,7 +79,7 @@ class GridWorld:
         if [x, y] in self.targets:
             return self.reward, [x, y]
         else:
-            return 0, [x, y]
+            return -1, [x, y]
 
     def calculate_g_reward(self):
         """

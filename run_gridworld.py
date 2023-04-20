@@ -1,6 +1,8 @@
 from gridworld import GridWorld
 from difference_reward import calc_difference_reward
 from pbrs import PBRS
+import numpy as np
+from global_functions import create_pickle_file, create_csv_file
 
 
 def manual_gridworld():
@@ -45,197 +47,250 @@ def manual_gridworld():
     return solution
 
 
-def q_learning_gridworld(gw, n_agents, n_targets, n_epochs, n_steps):
+def q_learning_gridworld(gw, n_agents, stat_runs, n_epochs, n_steps):
     """
     Use a standard q-learning approach to solve a multiagent gridworld
     """
-    for ep in range(n_epochs):
+    q_learning_curve = np.zeros((n_agents, stat_runs, n_epochs))
+    g_learning_curve = np.zeros((stat_runs, n_epochs))
+    for sr in range(stat_runs):
+        # Zero out the Q-Table of the agent for the new stat run
         for ag in gw.agents:
-            gw.agents[ag].reset_agent()
-            agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
-            gw.agents[ag].set_current_state(agent_state)
-
-        for t in range(n_steps):
+            gw.agents[ag].reset_learner()
+        best_solution = [[] for ag in range(n_agents)]
+        for ep in range(n_epochs):
+            # Reset agent to initial conditions (does not erase Q-Table)
             for ag in gw.agents:
+                gw.agents[ag].reset_agent()
                 agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
-                gw.agents[ag].action = gw.agents[ag].get_egreedy_action(agent_state)
-                reward, gw.agents[ag].loc = gw.step(gw.agents[ag].loc, gw.agents[ag].action)
-                next_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
-                gw.agents[ag].update_state(next_state)
+                gw.agents[ag].set_current_state(agent_state)
 
-                # Update Q-Table
-                gw.agents[ag].update_q_val(reward)
+            # Take actions over n timesteps
+            for t in range(n_steps):
+                for ag in gw.agents:
+                    agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+                    gw.agents[ag].action = gw.agents[ag].get_egreedy_action(agent_state)
+                    reward, gw.agents[ag].loc = gw.step(gw.agents[ag].loc, gw.agents[ag].action)
+                    next_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+                    gw.agents[ag].update_state(next_state)
 
-                if reward > 0:
-                    break
+                    # Update Q-Table
+                    gw.agents[ag].update_q_val(reward)
 
-    # Record agent solutions
-    solution = [[] for ag in range(n_agents)]
-    for ag in gw.agents:
-        gw.agents[ag].reset_agent()
-        agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
-        gw.agents[ag].set_current_state(agent_state)
-    for t in range(n_steps):
-        for ag in range(n_agents):
-            agent_state = gw.agents[f'A{ag}'].loc[0] + gw.height * gw.agents[f'A{ag}'].loc[1]
-            gw.agents[f'A{ag}'].action = gw.agents[f'A{ag}'].get_greedy_action(agent_state)
-            solution[ag].append(gw.agents[f'A{ag}'].action)
-            reward, gw.agents[f'A{ag}'].loc = gw.step(gw.agents[f'A{ag}'].loc, gw.agents[f'A{ag}'].action)
-            next_state = gw.agents[f'A{ag}'].loc[0] + gw.height * gw.agents[f'A{ag}'].loc[1]
-            gw.agents[f'A{ag}'].update_state(next_state)
+            # Test agent's best solution thus far
+            for ag in gw.agents:
+                gw.agents[ag].reset_agent()
+                agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+                gw.agents[ag].set_current_state(agent_state)
+            for t in range(n_steps):
+                for id, ag in enumerate(gw.agents):
+                    agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+                    gw.agents[ag].action = gw.agents[ag].get_greedy_action(agent_state)
+                    if ep % (n_epochs-1) == 0:
+                        best_solution[id].append(gw.agents[ag].action)
+                    reward, gw.agents[ag].loc = gw.step(gw.agents[ag].loc, gw.agents[ag].action)
+                    q_learning_curve[id, sr, ep] += reward
+                    next_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+                    gw.agents[ag].update_state(next_state)
+            g_reward = gw.calculate_g_reward()
+            g_learning_curve[sr, ep] = g_reward
 
-    print("Agent Start Position: ", gw.agents['A0'].initial_position)
-    print("Target Location: ", gw.targets[0])
-    print("Solution: ", solution)
+        create_csv_file(best_solution, "Output_Data/", "QLearningAgentSolutions.csv")
+    create_pickle_file(q_learning_curve, "Output_Data/", "QLearningReward")
+    create_pickle_file(g_learning_curve, "Output_Data/", "QLearning_GReward")
 
 
-def gridworld_global(gw, n_agents, n_targets, n_epochs, n_steps):
+def gridworld_global(gw, n_agents, stat_runs, n_epochs, n_steps):
     """
     Train multiagent team on Gridworld using global reward as feedback
     """
-    for ep in range(n_epochs):
+    agent_learning_curves = np.zeros((stat_runs, n_epochs))
+    for sr in range(stat_runs):
+        best_solution = [[] for ag in range(n_agents)]
+        # Zero out the Q-Table of the agent for the new stat run
         for ag in gw.agents:
-            gw.agents[ag].reset_agent()
-            agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
-            gw.agents[ag].set_current_state(agent_state)
-
-        # Agents choose actions for pre-determined number of time steps
-        for t in range(n_steps):
+            gw.agents[ag].reset_learner()
+        for ep in range(n_epochs):
+            # Reset agent to initial conditions (does not erase Q-Table)
             for ag in gw.agents:
+                gw.agents[ag].reset_agent()
                 agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
-                gw.agents[ag].action = gw.agents[ag].get_egreedy_action(agent_state)
-                l_reward, gw.agents[ag].loc = gw.step(gw.agents[ag].loc, gw.agents[ag].action)
-                next_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
-                gw.agents[ag].update_state(next_state)
+                gw.agents[ag].set_current_state(agent_state)
 
-            g_reward = gw.calculate_g_reward()
-            # Update Agent Q-Tables
+            # Agents choose actions for pre-determined number of time steps
+            for t in range(n_steps):
+                for ag in gw.agents:
+                    agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+                    gw.agents[ag].action = gw.agents[ag].get_egreedy_action(agent_state)
+                    l_reward, gw.agents[ag].loc = gw.step(gw.agents[ag].loc, gw.agents[ag].action)
+                    next_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+                    gw.agents[ag].update_state(next_state)
+
+                g_reward = gw.calculate_g_reward()
+                # Update Agent Q-Tables
+                for ag in gw.agents:
+                    gw.agents[ag].update_q_val(g_reward)
+
+            # Test agent solution
             for ag in gw.agents:
-                gw.agents[ag].update_q_val(g_reward)
+                gw.agents[ag].reset_agent()
+                agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+                gw.agents[ag].set_current_state(agent_state)
+            for t in range(n_steps):
+                for id, ag in enumerate(gw.agents):
+                    agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+                    gw.agents[ag].action = gw.agents[ag].get_greedy_action(agent_state)
+                    if ep % (n_epochs-1) == 0:
+                        best_solution[id].append(gw.agents[ag].action)
+                    l_reward, gw.agents[ag].loc = gw.step(gw.agents[ag].loc, gw.agents[ag].action)
+                    next_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+                    gw.agents[ag].update_state(next_state)
+            g_reward = gw.calculate_g_reward()
+            agent_learning_curves[sr, ep] = g_reward
 
-    # Record agent solutions
-    solution = [[] for ag in range(n_agents)]
-    for ag in gw.agents:
-        gw.agents[ag].reset_agent()
-        agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
-        gw.agents[ag].set_current_state(agent_state)
-    for t in range(n_steps):
-        for ag in range(n_agents):
-            agent_state = gw.agents[f'A{ag}'].loc[0] + gw.height * gw.agents[f'A{ag}'].loc[1]
-            gw.agents[f'A{ag}'].action = gw.agents[f'A{ag}'].get_greedy_action(agent_state)
-            solution[ag].append(gw.agents[f'A{ag}'].action)
-            l_reward, gw.agents[f'A{ag}'].loc = gw.step(gw.agents[f'A{ag}'].loc, gw.agents[f'A{ag}'].action)
-            next_state = gw.agents[f'A{ag}'].loc[0] + gw.height * gw.agents[f'A{ag}'].loc[1]
-            gw.agents[f'A{ag}'].update_state(next_state)
+    create_pickle_file(agent_learning_curves, "Output_Data/", "Global_Rewards")
 
 
-def gridworld_difference(gw, n_agents, n_targets, n_epochs, n_steps):
+def gridworld_difference(gw, n_agents, stat_runs, n_epochs, n_steps):
     """
     Train multiagent team on Gridworld using difference reward as feedback
     """
-    for ep in range(n_epochs):
+    agent_learning_curves = np.zeros((stat_runs, n_epochs))
+    for sr in range(stat_runs):
+        best_solution = [[] for ag in range(n_agents)]
+        # Zero out the Q-Table of the agent for the new stat run
         for ag in gw.agents:
-            gw.agents[ag].reset_agent()
-            agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
-            gw.agents[ag].set_current_state(agent_state)
-
-        # Agents choose actions for pre-determined number of time steps
-        for t in range(n_steps):
+            gw.agents[ag].reset_learner()
+        for ep in range(n_epochs):
+            # Reset agent to initial conditions (does not erase Q-Table)
             for ag in gw.agents:
+                gw.agents[ag].reset_agent()
                 agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
-                gw.agents[ag].action = gw.agents[ag].get_egreedy_action(agent_state)
-                l_reward, gw.agents[ag].loc = gw.step(gw.agents[ag].loc, gw.agents[ag].action)
-                next_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
-                gw.agents[ag].update_state(next_state)
+                gw.agents[ag].set_current_state(agent_state)
 
+            # Agents choose actions for pre-determined number of time steps
+            for t in range(n_steps):
+                for ag in gw.agents:
+                    agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+                    gw.agents[ag].action = gw.agents[ag].get_egreedy_action(agent_state)
+                    l_reward, gw.agents[ag].loc = gw.step(gw.agents[ag].loc, gw.agents[ag].action)
+                    next_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+                    gw.agents[ag].update_state(next_state)
+
+                g_reward = gw.calculate_g_reward()
+                d_reward = calc_difference_reward(g_reward, gw)
+                # Update Agent Q-Tables
+                for id, ag in enumerate(gw.agents):
+                    gw.agents[ag].update_q_val(d_reward[id])
+
+            # Test agent solution
+            for ag in gw.agents:
+                gw.agents[ag].reset_agent()
+                agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+                gw.agents[ag].set_current_state(agent_state)
+            for t in range(n_steps):
+                for id, ag in enumerate(gw.agents):
+                    agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+                    gw.agents[ag].action = gw.agents[ag].get_greedy_action(agent_state)
+                    if ep % (n_epochs-1) == 0:
+                        best_solution[id].append(gw.agents[ag].action)
+                    l_reward, gw.agents[ag].loc = gw.step(gw.agents[ag].loc, gw.agents[ag].action)
+                    next_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+                    gw.agents[ag].update_state(next_state)
             g_reward = gw.calculate_g_reward()
-            d_reward = calc_difference_reward(g_reward, gw)
-            # Update Agent Q-Tables
-            for ag in range(n_agents):
-                gw.agents[f'A{ag}'].update_q_val(d_reward[ag])
+            agent_learning_curves[sr, ep] = g_reward
 
-    # Record agent solutions
-    solution = [[] for ag in range(n_agents)]
-    for ag in gw.agents:
-        gw.agents[ag].reset_agent()
-        agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
-        gw.agents[ag].set_current_state(agent_state)
-    for t in range(n_steps):
-        for ag in range(n_agents):
-            agent_state = gw.agents[f'A{ag}'].loc[0] + gw.height * gw.agents[f'A{ag}'].loc[1]
-            gw.agents[f'A{ag}'].action = gw.agents[f'A{ag}'].get_greedy_action(agent_state)
-            solution[ag].append(gw.agents[f'A{ag}'].action)
-            l_reward, gw.agents[f'A{ag}'].loc = gw.step(gw.agents[f'A{ag}'].loc, gw.agents[f'A{ag}'].action)
-            next_state = gw.agents[f'A{ag}'].loc[0] + gw.height * gw.agents[f'A{ag}'].loc[1]
-            gw.agents[f'A{ag}'].update_state(next_state)
+    create_pickle_file(agent_learning_curves, "Output_Data/", "Difference_Rewards")
 
 
-def gridworld_pbrs(gw, n_agents, n_targets, n_epochs, n_steps):
+def gridworld_pbrs(gw, n_agents, stat_runs, n_epochs, n_steps):
     """
     Train multiagent team on Gridworld using potential-based reward shaping
     """
+    agent_learning_curves = np.zeros((stat_runs, n_epochs))
     agent_pbrs = {f'P{ag}': PBRS(gw.n_states) for ag in range(n_agents)}
     for ag in agent_pbrs:
         agent_pbrs[ag].set_potentials(gw)
-    for ep in range(n_epochs):
-        # Reset agents to initial conditions
-        for ag in gw.agents:
-            gw.agents[ag].reset_agent()
-            agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
-            gw.agents[ag].set_current_state(agent_state)
 
-        # Agents choose actions for pre-determined number of time steps
-        for t in range(n_steps):
-            for ag in gw.agents:
-                agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
-                gw.agents[ag].action = gw.agents[ag].get_egreedy_action(agent_state)
-                l_reward, gw.agents[ag].loc = gw.step(gw.agents[ag].loc, gw.agents[ag].action)
-                next_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
-                gw.agents[ag].update_state(next_state)
-
-            # Calculate agent rewards
-            g_reward = gw.calculate_g_reward()
-            for ag in range(n_agents):
-                # Calculate change in potential
-                ag_current_state = gw.agents[f'A{ag}'].current_state  # Current agent state
-                ag_prev_state = gw.agents[f'A{ag}'].prev_state  # Previous agent state
-                delta_phi = agent_pbrs[f'P{ag}'].potential_function(ag_current_state, ag_prev_state)
-
-                # Update Q-table and state potentials
-                gw.agents[f'A{ag}'].update_q_val(g_reward + delta_phi)
-
-    # Record agent solutions
-    solution = [[] for ag in range(n_agents)]
-    for ag in gw.agents:
-        gw.agents[ag].reset_agent()
-        agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
-        gw.agents[ag].set_current_state(agent_state)
-    for t in range(n_steps):
+    for sr in range(stat_runs):
+        best_solution = [[] for ag in range(n_agents)]
+        # Zero out the Q-Table of the agent for the new stat run
         for ag in range(n_agents):
-            agent_state = gw.agents[f'A{ag}'].loc[0] + gw.height * gw.agents[f'A{ag}'].loc[1]
-            gw.agents[f'A{ag}'].action = gw.agents[f'A{ag}'].get_greedy_action(agent_state)
-            solution[ag].append(gw.agents[f'A{ag}'].action)
-            l_reward, gw.agents[f'A{ag}'].loc = gw.step(gw.agents[f'A{ag}'].loc, gw.agents[f'A{ag}'].action)
-            next_state = gw.agents[f'A{ag}'].loc[0] + gw.height * gw.agents[f'A{ag}'].loc[1]
-            gw.agents[f'A{ag}'].update_state(next_state)
+            gw.agents[f'A{ag}'].reset_learner()
+            agent_pbrs[f'P{ag}'].reset_potentials()
+        for ep in range(n_epochs):
+            # Reset agents to initial conditions
+            for ag in gw.agents:
+                gw.agents[ag].reset_agent()
+                agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+                gw.agents[ag].set_current_state(agent_state)
+
+            # Agents choose actions for pre-determined number of time steps
+            for t in range(n_steps):
+                for ag in gw.agents:
+                    agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+                    gw.agents[ag].action = gw.agents[ag].get_egreedy_action(agent_state)
+                    l_reward, gw.agents[ag].loc = gw.step(gw.agents[ag].loc, gw.agents[ag].action)
+                    next_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+                    gw.agents[ag].update_state(next_state)
+
+                # Calculate agent rewards
+                g_reward = gw.calculate_g_reward()
+                for id, ag in enumerate(gw.agents):
+                    # Calculate change in potential
+                    ag_current_state = gw.agents[ag].current_state  # Current agent state
+                    ag_prev_state = gw.agents[ag].prev_state  # Previous agent state
+                    delta_phi = agent_pbrs[f'P{id}'].potential_function(ag_current_state, ag_prev_state)
+
+                    # Update Q-table and state potentials
+                    gw.agents[ag].update_q_val(g_reward + delta_phi)
+
+            # Test agent solution
+            for ag in gw.agents:
+                gw.agents[ag].reset_agent()
+                agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+                gw.agents[ag].set_current_state(agent_state)
+            for t in range(n_steps):
+                for id, ag in enumerate(gw.agents):
+                    agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+                    gw.agents[ag].action = gw.agents[ag].get_greedy_action(agent_state)
+                    if ep % (n_epochs-1) == 0:
+                        best_solution[id].append(gw.agents[ag].action)
+                    l_reward, gw.agents[ag].loc = gw.step(gw.agents[ag].loc, gw.agents[ag].action)
+                    next_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+                    gw.agents[ag].update_state(next_state)
+            g_reward = gw.calculate_g_reward()
+            agent_learning_curves[sr, ep] = g_reward
+
+    create_pickle_file(agent_learning_curves, "Output_Data/", "PBRS_Rewards")
 
 
 if __name__ == "__main__":
-    width = 5
-    height = 5
-    n_agents = 1
-    n_targets = 1
-    n_epochs = 10
-    n_steps = 15
+    width = 8
+    height = 8
+    n_agents = 5
+    n_targets = 5
+    stat_runs = 30
+    n_epochs = 100
+    n_steps = 18
 
     gw = GridWorld(width, height)
     gw.create_world(n_agents, n_targets)
 
+    # Training with Standard Q-Learning and Local Rewaerd
+    print("Running Gridworld with Q-Learning Local Reward")
+    q_learning_gridworld(gw, n_agents, stat_runs, n_epochs, n_steps)
+
     # Training with Global Reward
-    # gridworld_global(gw, n_agents, n_targets, n_epochs, n_steps)
+    print("Running Gridworld with Global Reward")
+    gridworld_global(gw, n_agents, stat_runs, n_epochs, n_steps)
 
     # Training with Difference Reward
-    # gridworld_difference(gw, n_agents, n_targets, n_epochs, n_steps)
-    gridworld_pbrs(gw, n_agents, n_targets, n_epochs, n_steps)
+    print("Running Gridworld with Difference Reward")
+    gridworld_difference(gw, n_agents, stat_runs, n_epochs, n_steps)
+
+    # Training with Potential Based Reward Shaping
+    print("Running Gridworld with PBRS")
+    gridworld_pbrs(gw, n_agents, stat_runs, n_epochs, n_steps)
 
     # TODO: Implement CFL
