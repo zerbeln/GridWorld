@@ -1,6 +1,8 @@
 # Other Files
 Output_Data/
 .idea/
+Plots/
+World_Config/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
