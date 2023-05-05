@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import pickle
 import numpy as np
+import os
 
 
 def import_pickle_data(file_path):
@@ -62,22 +63,33 @@ def create_learning_curve(n_agents, n_epochs):
     pbrs_rdata = import_pickle_data("Output_Data/PBRS_Rewards")
     pbrs_rewards = np.mean(pbrs_rdata[:], axis=0)
 
+    # CFL Data
+    cfl_rdata = import_pickle_data("Output_Data/CFL_Rewards")
+    cfl_rewards = np.mean(cfl_rdata[:], axis=0)
+
     x_axis = [i for i in range(n_epochs)]
     plt.plot(x_axis, ql_rewards)
     plt.plot(x_axis, g_rewards)
     plt.plot(x_axis, d_rewards)
     plt.plot(x_axis, pbrs_rewards)
+    plt.plot(x_axis, cfl_rewards)
 
     # Graph Details
     plt.xlabel("Epochs")
     plt.ylabel("System Reward")
-    plt.legend(["Q-Learning", "Global", "Difference", "PBRS"])
+    plt.legend(["Q-Learning", "Global", "Difference", "PBRS", "CFL"])
 
+    # Save the plot
+    if not os.path.exists('Plots'):  # If Data directory does not exist, create it
+        os.makedirs('Plots')
+    plt.savefig("Plots/Gridworld_LCurves.pdf")
+
+    # Show the plot
     plt.show()
 
 
 if __name__ == "__main__":
-    n_epochs = 100
-    n_agents = 5
+    n_epochs = 200
+    n_agents = 12
     # create_q_learn_plot(n_agents, n_epochs)
     create_learning_curve(n_agents, n_epochs)

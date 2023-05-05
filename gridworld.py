@@ -1,6 +1,8 @@
 from agent import QLearner
 import random
 import numpy as np
+import os
+import csv
 
 
 class GridWorld:
@@ -8,7 +10,7 @@ class GridWorld:
         self.width = width
         self.height = height
         self.n_states = height * width
-        self.reward = 100
+        self.reward = 10
         self.agents = {}  # Dictionary for agent objects
         self.targets = []  # Coordinates of targets in the Gridworld
         self.walls = []  # Coordinates of cells that are walls in the Gridworld
@@ -37,6 +39,62 @@ class GridWorld:
 
             a_loc.append([x, y])
             self.agents[f'A{a}'] = QLearner(self.width*self.height, x, y)
+
+        self.save_configuration()
+
+    def save_configuration(self):
+        """
+        Save the Gridworld configuration to a CSV file
+        """
+        dir_name = 'World_Config'  # Intended directory for output files
+
+        if not os.path.exists(dir_name):  # If Data directory does not exist, create it
+            os.makedirs(dir_name)
+
+        tfile_name = os.path.join(dir_name, f'Target_Config.csv')
+        afile_name = os.path.join(dir_name, f'Agent_Config.csv')
+
+        with open(tfile_name, 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for t_loc in self.targets:
+                writer.writerow(t_loc)
+
+        with open(afile_name, 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for ag in self.agents:
+                writer.writerow(self.agents[ag].loc)
+
+        csvfile.close()
+
+    def load_configuration(self, n_agents, n_targets):
+        """
+        Load Gridworld configuration from CSV files
+        """
+        csv_target_input = []
+        csv_agent_input = []
+        with open(f'World_Config/Target_Config.csv') as csvfile:
+            csv_reader = csv.reader(csvfile, delimiter=',')
+
+            for row in csv_reader:
+                csv_target_input.append(row)
+
+        for target_id in range(n_targets):
+            tx = float(csv_target_input[target_id][0])
+            ty = float(csv_target_input[target_id][1])
+
+            self.targets.append([tx, ty])
+
+        with open(f'World_Config/Agent_Config.csv') as csvfile:
+            csv_reader = csv.reader(csvfile, delimiter=',')
+
+            for row in csv_reader:
+                csv_agent_input.append(row)
+
+        for agent_id in range(n_agents):
+            ax = float(csv_agent_input[agent_id][0])
+            ay = float(csv_agent_input[agent_id][1])
+
+            self.agents[f'A{agent_id}'] = QLearner(self.width*self.height, int(ax), int(ay))
 
     def check_collision(self, x, y):
         """
@@ -98,5 +156,7 @@ class GridWorld:
         for tcount in target_capture_counter:
             if tcount > 0:
                 global_reward += self.reward
+            else:
+                global_reward -= 1
 
         return global_reward

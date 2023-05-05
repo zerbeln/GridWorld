@@ -23,7 +23,7 @@ class QLearner(Agent):
         self.n_actions = len(self.actions)
         self.discount = 0.9  # Discount factor (gamma)
         self.alpha = 0.1  # Learning rate
-        self.epsilon = 0.1  # e-greedy
+        self.epsilon = 0.2  # e-greedy
         self.q_table = np.zeros((n_states, len(self.actions)))
         self.current_state = None
         self.prev_state = None

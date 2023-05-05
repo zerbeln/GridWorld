@@ -1,5 +1,6 @@
 from gridworld import GridWorld
 from difference_reward import calc_difference_reward
+from cfl import calc_cfl_difference, create_counterfactuals
 from pbrs import PBRS
 import numpy as np
 from global_functions import create_pickle_file, create_csv_file
@@ -70,12 +71,12 @@ def q_learning_gridworld(gw, n_agents, stat_runs, n_epochs, n_steps):
                 for ag in gw.agents:
                     agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
                     gw.agents[ag].action = gw.agents[ag].get_egreedy_action(agent_state)
-                    reward, gw.agents[ag].loc = gw.step(gw.agents[ag].loc, gw.agents[ag].action)
+                    l_reward, gw.agents[ag].loc = gw.step(gw.agents[ag].loc, gw.agents[ag].action)
                     next_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
                     gw.agents[ag].update_state(next_state)
 
                     # Update Q-Table
-                    gw.agents[ag].update_q_val(reward)
+                    gw.agents[ag].update_q_val(l_reward)
 
             # Test agent's best solution thus far
             for ag in gw.agents:
@@ -88,10 +89,8 @@ def q_learning_gridworld(gw, n_agents, stat_runs, n_epochs, n_steps):
                     gw.agents[ag].action = gw.agents[ag].get_greedy_action(agent_state)
                     if ep % (n_epochs-1) == 0:
                         best_solution[id].append(gw.agents[ag].action)
-                    reward, gw.agents[ag].loc = gw.step(gw.agents[ag].loc, gw.agents[ag].action)
-                    q_learning_curve[id, sr, ep] += reward
-                    next_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
-                    gw.agents[ag].update_state(next_state)
+                    l_reward, gw.agents[ag].loc = gw.step(gw.agents[ag].loc, gw.agents[ag].action)
+                    q_learning_curve[id, sr, ep] += l_reward
             g_reward = gw.calculate_g_reward()
             g_learning_curve[sr, ep] = g_reward
 
@@ -143,8 +142,6 @@ def gridworld_global(gw, n_agents, stat_runs, n_epochs, n_steps):
                     if ep % (n_epochs-1) == 0:
                         best_solution[id].append(gw.agents[ag].action)
                     l_reward, gw.agents[ag].loc = gw.step(gw.agents[ag].loc, gw.agents[ag].action)
-                    next_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
-                    gw.agents[ag].update_state(next_state)
             g_reward = gw.calculate_g_reward()
             agent_learning_curves[sr, ep] = g_reward
 
@@ -195,8 +192,6 @@ def gridworld_difference(gw, n_agents, stat_runs, n_epochs, n_steps):
                     if ep % (n_epochs-1) == 0:
                         best_solution[id].append(gw.agents[ag].action)
                     l_reward, gw.agents[ag].loc = gw.step(gw.agents[ag].loc, gw.agents[ag].action)
-                    next_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
-                    gw.agents[ag].update_state(next_state)
             g_reward = gw.calculate_g_reward()
             agent_learning_curves[sr, ep] = g_reward
 
@@ -209,15 +204,14 @@ def gridworld_pbrs(gw, n_agents, stat_runs, n_epochs, n_steps):
     """
     agent_learning_curves = np.zeros((stat_runs, n_epochs))
     agent_pbrs = {f'P{ag}': PBRS(gw.n_states) for ag in range(n_agents)}
-    for ag in agent_pbrs:
-        agent_pbrs[ag].set_potentials(gw)
+    for id, ag in enumerate(agent_pbrs):
+        agent_pbrs[ag].set_potentials(gw, id, n_steps)
 
     for sr in range(stat_runs):
         best_solution = [[] for ag in range(n_agents)]
         # Zero out the Q-Table of the agent for the new stat run
         for ag in range(n_agents):
             gw.agents[f'A{ag}'].reset_learner()
-            agent_pbrs[f'P{ag}'].reset_potentials()
         for ep in range(n_epochs):
             # Reset agents to initial conditions
             for ag in gw.agents:
@@ -257,25 +251,75 @@ def gridworld_pbrs(gw, n_agents, stat_runs, n_epochs, n_steps):
                     if ep % (n_epochs-1) == 0:
                         best_solution[id].append(gw.agents[ag].action)
                     l_reward, gw.agents[ag].loc = gw.step(gw.agents[ag].loc, gw.agents[ag].action)
-                    next_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
-                    gw.agents[ag].update_state(next_state)
             g_reward = gw.calculate_g_reward()
             agent_learning_curves[sr, ep] = g_reward
 
     create_pickle_file(agent_learning_curves, "Output_Data/", "PBRS_Rewards")
 
 
+def gridworld_cfrl(gw, n_agents, stat_runs, n_epochs, n_steps, counterfactuals):
+    """
+    Train multiagent team on Gridworld using CFL difference rewards as feedback
+    """
+    agent_learning_curves = np.zeros((stat_runs, n_epochs))
+    for sr in range(stat_runs):
+        best_solution = [[] for ag in range(n_agents)]
+        # Zero out the Q-Table of the agent for the new stat run
+        for ag in gw.agents:
+            gw.agents[ag].reset_learner()
+        for ep in range(n_epochs):
+            # Reset agent to initial conditions (does not erase Q-Table)
+            for ag in gw.agents:
+                gw.agents[ag].reset_agent()
+                agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+                gw.agents[ag].set_current_state(agent_state)
+
+            # Agents choose actions for pre-determined number of time steps
+            for t in range(n_steps):
+                for ag in gw.agents:
+                    agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+                    gw.agents[ag].action = gw.agents[ag].get_egreedy_action(agent_state)
+                    l_reward, gw.agents[ag].loc = gw.step(gw.agents[ag].loc, gw.agents[ag].action)
+                    next_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+                    gw.agents[ag].update_state(next_state)
+
+                g_reward = gw.calculate_g_reward()
+                d_reward = calc_cfl_difference(g_reward, gw, counterfactuals)
+                # Update Agent Q-Tables
+                for id, ag in enumerate(gw.agents):
+                    gw.agents[ag].update_q_val(d_reward[id])
+
+            # Test agent solution
+            for ag in gw.agents:
+                gw.agents[ag].reset_agent()
+                agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+                gw.agents[ag].set_current_state(agent_state)
+            for t in range(n_steps):
+                for id, ag in enumerate(gw.agents):
+                    if gw.agents[ag].loc not in gw.targets:
+                        agent_state = gw.agents[ag].loc[0] + gw.height * gw.agents[ag].loc[1]
+                        gw.agents[ag].action = gw.agents[ag].get_greedy_action(agent_state)
+                        if ep % (n_epochs - 1) == 0:
+                            best_solution[id].append(gw.agents[ag].action)
+                        l_reward, gw.agents[ag].loc = gw.step(gw.agents[ag].loc, gw.agents[ag].action)
+            g_reward = gw.calculate_g_reward()
+            agent_learning_curves[sr, ep] = g_reward
+
+    create_pickle_file(agent_learning_curves, "Output_Data/", "CFL_Rewards")
+
+
 if __name__ == "__main__":
     width = 8
     height = 8
-    n_agents = 5
-    n_targets = 5
+    n_agents = 12
+    n_targets = 12
     stat_runs = 30
-    n_epochs = 100
-    n_steps = 18
+    n_epochs = 200
+    n_steps = 10
 
     gw = GridWorld(width, height)
-    gw.create_world(n_agents, n_targets)
+    # gw.create_world(n_agents, n_targets)  # Create a new world configuration
+    gw.load_configuration(n_agents, n_targets)  # Reuse a world configuration
 
     # Training with Standard Q-Learning and Local Rewaerd
     print("Running Gridworld with Q-Learning Local Reward")
@@ -293,4 +337,6 @@ if __name__ == "__main__":
     print("Running Gridworld with PBRS")
     gridworld_pbrs(gw, n_agents, stat_runs, n_epochs, n_steps)
 
-    # TODO: Implement CFL
+    print("Running Gridworld with CFL")
+    counterfactuals = create_counterfactuals(gw)
+    gridworld_cfrl(gw, n_agents, stat_runs, n_epochs, n_steps, counterfactuals)
