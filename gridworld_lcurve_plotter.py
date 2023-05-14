@@ -89,7 +89,7 @@ def create_learning_curve(n_agents, n_epochs):
 
 
 if __name__ == "__main__":
-    n_epochs = 200
-    n_agents = 12
+    n_epochs = 1000
+    n_agents = 20
     # create_q_learn_plot(n_agents, n_epochs)
     create_learning_curve(n_agents, n_epochs)

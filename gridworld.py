@@ -143,8 +143,6 @@ class GridWorld:
         """
         Calculate the global reward for the team of agents
         """
-        global_reward = 0
-
         # Count number of agents at a target
         target_capture_counter = np.zeros(len(self.targets))
         for id, loc in enumerate(self.targets):
@@ -152,11 +150,16 @@ class GridWorld:
                 if loc == self.agents[ag].loc:
                     target_capture_counter[id] += 1
 
-        # If target has at least one agent, targets increases reward
-        for tcount in target_capture_counter:
-            if tcount > 0:
-                global_reward += self.reward
-            else:
-                global_reward -= 1
+        # Count how many unique targets are captured
+        target_count = 0
+        for agent_count in target_capture_counter:
+            if agent_count > 0:
+                target_count += 1
 
-        return global_reward
+        assert(target_count <= len(self.targets))
+        if target_count > 0:
+            return target_count/len(self.targets)
+        else:
+            return 0
+
+        # return global_reward
