@@ -1,9 +1,39 @@
 import numpy as np
 
 
-def create_counterfactuals(gw, nsteps):
+def distance_based(gw):
     """
     Create counterfactuals that agents will use for CFL learning
+    """
+    counterfactuals = [[0 for i in range(len(gw.targets))] for j in range(len(gw.agents))]
+    for a_id, ag in enumerate(gw.agents):
+        for t_id, t_loc in enumerate(gw.targets):
+            x_dist = abs(gw.agents[ag].loc[0] - t_loc[0])
+            y_dist = abs(gw.agents[ag].loc[1] - t_loc[1])
+            total_dist = x_dist + y_dist
+
+            if total_dist > (gw.width - 3):
+                counterfactuals[a_id][t_id] = 1
+
+    return counterfactuals
+
+
+def value_based(gw):
+    """
+    Counterfactual states reflect target values
+    """
+    counterfactuals = [[0 for i in range(len(gw.targets))] for j in range(len(gw.agents))]
+    for a_id in range(len(gw.agents)):
+        for t_id in range(len(gw.targets)):
+            if gw.target_values[t_id] > 1:
+                counterfactuals[a_id][t_id] = 1
+
+    return counterfactuals
+
+
+def agent_dist_split(gw, n_agents):
+    """
+    Create counterfactuals that divide agents evenly between capturing far away targets and close targets
     """
     counterfactuals = [[0 for i in range(len(gw.targets))] for j in range(len(gw.agents))]
     target_distances = [[0 for i in range(len(gw.targets))] for j in range(len(gw.agents))]
@@ -11,18 +41,44 @@ def create_counterfactuals(gw, nsteps):
         for t_id, t_loc in enumerate(gw.targets):
             x_dist = abs(gw.agents[ag].loc[0] - t_loc[0])
             y_dist = abs(gw.agents[ag].loc[1] - t_loc[1])
-            total_dist = x_dist + y_dist
-
-            if total_dist < (0.5*nsteps):
+            target_distances[a_id][t_id] = x_dist + y_dist
+            if target_distances[a_id][t_id] <= (gw.width - 3) and a_id < n_agents:
                 counterfactuals[a_id][t_id] = 1
-
-        # print(counterfactuals[a_id])
-        # Make sure far away agent does not receive a bad counterfactual
-        if 1 not in counterfactuals[a_id]:
-            for t_id in range(len(gw.targets)):
+            else:
                 counterfactuals[a_id][t_id] = 1
 
     return counterfactuals
+
+
+def poi_assignments(gw):
+    """
+    Assign each agent to a unique POI
+    """
+    counterfactuals = [[0 for i in range(len(gw.targets))] for j in range(len(gw.agents))]
+    for a_id, ag in enumerate(gw.agents):
+        for t_id, t_loc in enumerate(gw.targets):
+            if a_id == t_id:
+                counterfactuals[a_id][t_id] = 1
+
+    return counterfactuals
+
+
+def create_counterfactuals(gw, ctype, n_agents):
+    """
+    Generate counterfactual states for agents
+    """
+    if ctype == "distance":
+        counterfactuals = distance_based(gw)
+        return counterfactuals
+    elif ctype == "split":
+        counterfactuals = agent_dist_split(gw, n_agents)
+        return counterfactuals
+    elif ctype == "assign":
+        counterfactuals = poi_assignments(gw)
+        return counterfactuals
+    else:
+        counterfactuals = value_based(gw)
+        return counterfactuals
 
 
 def calc_cfl_difference(g_reward, gw, counterfactuals):
@@ -42,15 +98,12 @@ def calc_cfl_difference(g_reward, gw, counterfactuals):
                     target_capture_counter[t_id] += 1
 
         # Count how many targets are captured in counterfactual state
-        target_count = 0
-        for agent_count in target_capture_counter:
+        target_values = 0
+        for t_id, agent_count in enumerate(target_capture_counter):
             if agent_count > 0:
-                target_count += 1
+                target_values += gw.target_values[t_id]
 
-        counterfactual_global_reward = 0
-        if target_count > 0:
-            counterfactual_global_reward = target_count/len(gw.targets)
-
+        counterfactual_global_reward = (target_values/sum(gw.target_values))*100
         difference_reward[i] = g_reward - counterfactual_global_reward
 
     return difference_reward

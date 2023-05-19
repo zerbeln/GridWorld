@@ -2,6 +2,8 @@ import matplotlib.pyplot as plt
 import pickle
 import numpy as np
 import os
+import sys
+import matplotlib.colors as mcolors
 
 
 def import_pickle_data(file_path):
@@ -39,7 +41,7 @@ def create_q_learn_plot(n_agents, n_epochs):
     plt.show()
 
 
-def create_learning_curve(n_agents, n_epochs):
+def create_learning_curve(n_agents, n_epochs, size):
     # Plot Color Palette
     color1 = np.array([26, 133, 255]) / 255  # Blue
     color2 = np.array([255, 194, 10]) / 255  # Yellow
@@ -67,29 +69,43 @@ def create_learning_curve(n_agents, n_epochs):
     cfl_rdata = import_pickle_data("Output_Data/CFL_Rewards")
     cfl_rewards = np.mean(cfl_rdata[:], axis=0)
 
+    # DRIP Data
+    drip_rdata = import_pickle_data("Output_Data/DRIP_Rewards")
+    drip_rewards = np.mean(drip_rdata[:], axis=0)
+
+    # CFLP Data
+    cflp_rdata = import_pickle_data("Output_Data/CFLP_Rewards")
+    cflp_rewards = np.mean(cflp_rdata[:], axis=0)
+
     x_axis = [i for i in range(n_epochs)]
-    plt.plot(x_axis, ql_rewards)
-    plt.plot(x_axis, g_rewards)
-    plt.plot(x_axis, d_rewards)
-    plt.plot(x_axis, pbrs_rewards)
-    plt.plot(x_axis, cfl_rewards)
+    plt.plot(x_axis, ql_rewards, color='black')
+    plt.plot(x_axis, g_rewards, color=color2)
+    plt.plot(x_axis, d_rewards, color=color3)
+    plt.plot(x_axis, pbrs_rewards, color=color5)
+    plt.plot(x_axis, cfl_rewards, color=color4)
+    plt.plot(x_axis, drip_rewards, color="limegreen")
+    plt.plot(x_axis, cflp_rewards, color=color1)
 
     # Graph Details
-    plt.xlabel("Epochs")
-    plt.ylabel("System Reward")
-    plt.legend(["Q-Learning", "Global", "Difference", "PBRS", "CFL"])
+    plt.xlabel("Number of Epochs")
+    plt.ylabel("Average Team Reward")
+    plt.ylim([0, 100])
+    plt.legend(["Q-Learning", "Global", "Difference", "PBRS", "CFL", "DRiP", "CFL-P"], ncol=2, bbox_to_anchor=(0.99, 0.01), loc='lower right', borderaxespad=0)
 
     # Save the plot
     if not os.path.exists('Plots'):  # If Data directory does not exist, create it
         os.makedirs('Plots')
-    plt.savefig("Plots/Gridworld_LCurves.pdf")
+    plt.savefig(f'Plots/{size}x{size}_{n_agents}Agent_LCurves.pdf')
 
     # Show the plot
     plt.show()
 
 
 if __name__ == "__main__":
-    n_epochs = 1000
-    n_agents = 20
+    n_epochs = 2000
+    # n_agents = int(sys.argv[1])
+    # size = int(sys.argv[2])
+    n_agents = 15
+    size = 8
     # create_q_learn_plot(n_agents, n_epochs)
-    create_learning_curve(n_agents, n_epochs)
+    create_learning_curve(n_agents, n_epochs, size)

@@ -50,7 +50,7 @@ class QLearner(Agent):
         q_val = self.q_table[self.prev_state, self.action]
         max_q = np.max(self.q_table[self.current_state])
 
-        new_q = q_val + self.alpha*(reward + self.discount*max_q - q_val)
+        new_q = ((1-self.alpha)*q_val) + self.alpha*(reward + (self.discount*max_q) - q_val)
         self.q_table[self.prev_state, self.action] = new_q
 
     def get_egreedy_action(self, state):

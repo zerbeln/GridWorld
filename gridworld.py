@@ -13,7 +13,29 @@ class GridWorld:
         self.reward = 10
         self.agents = {}  # Dictionary for agent objects
         self.targets = []  # Coordinates of targets in the Gridworld
+        self.target_values = None
         self.walls = []  # Coordinates of cells that are walls in the Gridworld
+
+    def assign_target_values(self, n_targets, n_steps):
+        """
+        Assign values to each target (these are distance based values)
+        """
+        self.target_values = np.zeros(n_targets)
+        center_x = int(self.width/2)
+        center_y = int(self.height/2)
+        for t_id, t_loc in enumerate(self.targets):
+            x_dist = abs(center_x - t_loc[0])
+            y_dist = abs(center_y - t_loc[1])
+            total_dist = x_dist + y_dist
+
+            if total_dist > int(self.width-3):
+                self.target_values[t_id] = 10
+            else:
+                self.target_values[t_id] = 1
+
+        print("Targets: ", self.targets)
+        print("Target Values: ", self.target_values)
+        print("Total Value: ", sum(self.target_values))
 
     def create_world(self, n_agents, n_targets):
         for t in range(n_targets):
@@ -42,6 +64,51 @@ class GridWorld:
 
         self.save_configuration()
 
+    def create_center_world(self, n_agents, n_targets, n_steps):
+        """
+        Create Gridworld where agents all start in the center
+        """
+        center_x = int(self.width/2)
+        center_y = int(self.height/2)
+
+        # Four corner targets
+        t1 = [0, 0]
+        dist1 = center_x + center_y
+        t2 = [0, self.height-1]
+        dist2 = center_x + abs(center_y - (self.height-1))
+        t3 = [self.width-1, 0]
+        dist3 = abs(center_x - (self.width-1)) + center_y
+        t4 = [self.width-1, self.height-1]
+        dist4 = abs(center_x - (self.width-1)) + abs(center_y - (self.height-1))
+        self.targets = [t1, t2, t3, t4]
+        target_distances = [dist1, dist2, dist3, dist4]
+
+        # Other targets (low value targets)
+        t = 4
+        while t < n_targets:
+            x = random.randint(2, self.width - 2)
+            y = random.randint(2, self.height - 2)
+            dist_to_center = abs(x - center_x) + abs(y - center_y)
+
+            # Make sure targets are not placed on top of each other
+            while [x, y] in self.targets or dist_to_center > self.width - 3 or dist_to_center == 0:
+                x = random.randint(2, self.width - 2)
+                y = random.randint(2, self.height - 2)
+                dist_to_center = abs(x - center_x) + abs(y - center_y)
+
+            target_distances.append(dist_to_center)
+
+            self.targets.append([x, y])
+            t += 1
+        print(target_distances)
+
+        a_loc = []  # Agent locations
+        for a in range(n_agents):
+            a_loc.append([center_x, center_y])
+            self.agents[f'A{a}'] = QLearner(self.width*self.height, center_x, center_y)
+
+        self.save_configuration()
+
     def save_configuration(self):
         """
         Save the Gridworld configuration to a CSV file
@@ -66,12 +133,14 @@ class GridWorld:
 
         csvfile.close()
 
-    def load_configuration(self, n_agents, n_targets):
+    def load_configuration(self, n_agents, n_targets, n_steps):
         """
         Load Gridworld configuration from CSV files
         """
         csv_target_input = []
         csv_agent_input = []
+
+        # Load target information
         with open(f'World_Config/Target_Config.csv') as csvfile:
             csv_reader = csv.reader(csvfile, delimiter=',')
 
@@ -84,6 +153,10 @@ class GridWorld:
 
             self.targets.append([tx, ty])
 
+        # Assign values to targets
+        self.assign_target_values(n_targets, n_steps)
+
+        # Load agent information
         with open(f'World_Config/Agent_Config.csv') as csvfile:
             csv_reader = csv.reader(csvfile, delimiter=',')
 
@@ -130,14 +203,12 @@ class GridWorld:
             collision = self.check_collision(x+1, y)
             if not collision:
                 x += 1
-        else:
-            assert(action == 4)  # Else the agent remains stationary
 
         # Return local agent reward and new agent state
         if [x, y] in self.targets:
             return self.reward, [x, y]
         else:
-            return -1, [x, y]
+            return 0, [x, y]
 
     def calculate_g_reward(self):
         """
@@ -151,15 +222,11 @@ class GridWorld:
                     target_capture_counter[id] += 1
 
         # Count how many unique targets are captured
-        target_count = 0
-        for agent_count in target_capture_counter:
+        target_values = 0
+        for t_id, agent_count in enumerate(target_capture_counter):
             if agent_count > 0:
-                target_count += 1
+                target_values += self.target_values[t_id]
 
-        assert(target_count <= len(self.targets))
-        if target_count > 0:
-            return target_count/len(self.targets)
-        else:
-            return 0
+        global_reward = (target_values/np.sum(self.target_values))*100
 
-        # return global_reward
+        return global_reward

@@ -16,14 +16,12 @@ def calc_difference_reward(g_reward, gw):
                     target_capture_counter[t_id] += 1
 
         # Count how many targets are captured in counterfactual state
-        target_count = 0
-        for agent_count in target_capture_counter:
+        target_values = 0
+        for t_id, agent_count in enumerate(target_capture_counter):
             if agent_count > 0:
-                target_count += 1
+                target_values += gw.target_values[t_id]
 
-        counterfactual_global_reward = 0
-        if target_count > 0:
-            counterfactual_global_reward = target_count/len(gw.targets)
+        counterfactual_global_reward = (target_values/sum(gw.target_values))*100
         difference_reward[i] = g_reward - counterfactual_global_reward
 
     return difference_reward
