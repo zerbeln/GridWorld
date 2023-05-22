@@ -16,24 +16,26 @@ class GridWorld:
         self.target_values = None
         self.walls = []  # Coordinates of cells that are walls in the Gridworld
 
-    def assign_target_values(self, n_targets, n_steps):
+    def assign_target_values(self, n_targets):
         """
         Assign values to each target (these are distance based values)
         """
         self.target_values = np.zeros(n_targets)
+        target_distances = np.zeros(n_targets)
         center_x = int(self.width/2)
         center_y = int(self.height/2)
         for t_id, t_loc in enumerate(self.targets):
             x_dist = abs(center_x - t_loc[0])
             y_dist = abs(center_y - t_loc[1])
             total_dist = x_dist + y_dist
+            target_distances[t_id] = total_dist
 
             if total_dist > int(self.width-3):
                 self.target_values[t_id] = 10
             else:
                 self.target_values[t_id] = 1
 
-        print("Targets: ", self.targets)
+        print("Targets Distances: ", target_distances)
         print("Target Values: ", self.target_values)
         print("Total Value: ", sum(self.target_values))
 
@@ -71,17 +73,20 @@ class GridWorld:
         center_x = int(self.width/2)
         center_y = int(self.height/2)
 
-        # Four corner targets
-        t1 = [0, 0]
-        dist1 = center_x + center_y
-        t2 = [0, self.height-1]
-        dist2 = center_x + abs(center_y - (self.height-1))
-        t3 = [self.width-1, 0]
-        dist3 = abs(center_x - (self.width-1)) + center_y
-        t4 = [self.width-1, self.height-1]
-        dist4 = abs(center_x - (self.width-1)) + abs(center_y - (self.height-1))
-        self.targets = [t1, t2, t3, t4]
-        target_distances = [dist1, dist2, dist3, dist4]
+        # Four distant targets
+        target_distances = []
+        for i in range(4):
+            x = random.randint(0, self.width - 1)
+            y = random.randint(0, self.height - 1)
+            dist_to_center = abs(x - center_x) + abs(y - center_y)
+
+            while dist_to_center != int(self.width-1) or [x, y] in self.targets:
+                x = random.randint(0, self.width - 1)
+                y = random.randint(0, self.height - 1)
+                dist_to_center = abs(x - center_x) + abs(y - center_y)
+
+            self.targets.append([x, y])
+            target_distances.append(dist_to_center)
 
         # Other targets (low value targets)
         t = 4
@@ -133,7 +138,7 @@ class GridWorld:
 
         csvfile.close()
 
-    def load_configuration(self, n_agents, n_targets, n_steps):
+    def load_configuration(self, n_agents, n_targets):
         """
         Load Gridworld configuration from CSV files
         """
@@ -151,10 +156,10 @@ class GridWorld:
             tx = float(csv_target_input[target_id][0])
             ty = float(csv_target_input[target_id][1])
 
-            self.targets.append([tx, ty])
+            self.targets.append([int(tx), int(ty)])
 
         # Assign values to targets
-        self.assign_target_values(n_targets, n_steps)
+        self.assign_target_values(n_targets)
 
         # Load agent information
         with open(f'World_Config/Agent_Config.csv') as csvfile:
@@ -206,7 +211,8 @@ class GridWorld:
 
         # Return local agent reward and new agent state
         if [x, y] in self.targets:
-            return self.reward, [x, y]
+            t_id = self.targets.index([x, y])
+            return self.target_values[t_id], [x, y]
         else:
             return 0, [x, y]
 
@@ -216,10 +222,10 @@ class GridWorld:
         """
         # Count number of agents at a target
         target_capture_counter = np.zeros(len(self.targets))
-        for id, loc in enumerate(self.targets):
+        for t_id, t_loc in enumerate(self.targets):
             for ag in self.agents:
-                if loc == self.agents[ag].loc:
-                    target_capture_counter[id] += 1
+                if t_loc == self.agents[ag].loc:
+                    target_capture_counter[t_id] += 1
 
         # Count how many unique targets are captured
         target_values = 0

@@ -21,7 +21,7 @@ def calc_difference_reward(g_reward, gw):
             if agent_count > 0:
                 target_values += gw.target_values[t_id]
 
-        counterfactual_global_reward = (target_values/sum(gw.target_values))*100
+        counterfactual_global_reward = (target_values/np.sum(gw.target_values))*100
         difference_reward[i] = g_reward - counterfactual_global_reward
 
     return difference_reward

@@ -1,18 +1,10 @@
 from gridworld import GridWorld
 import matplotlib.pyplot as plt
-import pickle
-import numpy as np
-import os
 
 
-def create_plot_gridworld():
-    width = 8
-    height = 8
-    n_agents = 15
-    n_targets = 15
-
+def create_plot_gridworld(n_agents, n_targets, width, height):
     gw = GridWorld(width, height)
-    gw.load_configuration(n_agents, n_targets, 10)  # Load GridWorld configuration from CSV files
+    gw.load_configuration(n_agents, n_targets)  # Load GridWorld configuration from CSV files
 
     agent_x = []
     agent_y = []
@@ -34,4 +26,4 @@ def create_plot_gridworld():
     plt.show()
 
 
-create_plot_gridworld()
+

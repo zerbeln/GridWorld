@@ -36,7 +36,7 @@ class PBRS:
         Set the potentials of states based on target locations
         """
         if ptype == "exploration":
-            self.exploration_potential(gw, gw.agents[f'A{agent_id}'].initial_position, n_steps)
+            self.exploration_potential(gw, n_steps)
         elif ptype == "target_prox":
             self.target_proximity_potential(gw, n_steps)
         elif ptype == "target_agent":
@@ -44,21 +44,19 @@ class PBRS:
         elif ptype == "custom":
             self.custom_potential(gw, agent_id)
 
-    def exploration_potential(self, gw, agent_loc, nsteps):
+    def exploration_potential(self, gw, nsteps):
         """
         Potential function that incentivizes agents travelling away from the center and towards targets
         """
+        center_x = int(gw.width/2)
+        center_y = int(gw.height/2)
+
         for x in range(gw.width):
             for y in range(gw.height):
                 state = x + gw.height * y
-                x_dist = abs(x - agent_loc[0])
-                y_dist = abs(y - agent_loc[1])
-                if [x, y] in gw.targets:
-                    for t_id in range(len(gw.targets)):
-                        if [x, y] == gw.targets[t_id]:
-                            self._initial_potentials[state] = gw.target_values[t_id]
-                else:
-                    self._initial_potentials[state] = (x_dist + y_dist)/(nsteps)
+                x_dist = abs(x - center_x)
+                y_dist = abs(y - center_y)
+                self._initial_potentials[state] = (x_dist + y_dist)/nsteps
 
         self.state_potentials = self._initial_potentials.copy()
 
@@ -77,7 +75,7 @@ class PBRS:
                     target_agent_dist = abs(agent_loc[0] - t_loc[0]) + abs(agent_loc[1] - t_loc[1])
 
                     if (target_state_dist + state_agent_dist) == target_agent_dist and t_id == agent_id:
-                        potential = 1 - (target_state_dist / (target_state_dist + state_agent_dist))
+                        potential = gw.target_values[t_id]*(1 - (target_state_dist / target_agent_dist))
                     else:
                         potential = 0.0
                     poi_state_potentials[state].append(potential)
@@ -98,11 +96,11 @@ class PBRS:
                     x_dist = abs(x - t_loc[0])
                     y_dist = abs(y - t_loc[1])
                     poi_state_distance = x_dist + y_dist
-                    potential = gw.target_values[t_id]*(1 - (poi_state_distance / n_steps))
+                    potential = (1 - (poi_state_distance/n_steps))
                     poi_state_potentials[state].append(potential)
 
         for state in range(self.n_states):
-            self._initial_potentials[state] = max(poi_state_potentials[state])
+            self._initial_potentials[state] = np.mean(poi_state_potentials[state])
         self.state_potentials = self._initial_potentials.copy()
 
     def target_agent_distance(self, gw, agent_id):

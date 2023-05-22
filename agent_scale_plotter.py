@@ -29,149 +29,57 @@ def create_scaling_plot(n_tests, size, x_axis):
     # Q-Learning Data -------------------------------------------------------------
     ql_rewards = []
     ql_data = []
-    if size == 8:
-        ql_data.append(import_pickle_data("5Agents/Output_Data/QLearning_GReward"))
-        ql_data.append(import_pickle_data("8Agents/Output_Data/QLearning_GReward"))
-        ql_data.append(import_pickle_data("10Agents/Output_Data/QLearning_GReward"))
-        ql_data.append(import_pickle_data("12Agents/Output_Data/QLearning_GReward"))
-        ql_data.append(import_pickle_data("15Agents/Output_Data/QLearning_GReward"))
-        ql_data.append(import_pickle_data("18Agents/Output_Data/QLearning_GReward"))
-        ql_data.append(import_pickle_data("20Agents/Output_Data/QLearning_GReward"))
-    elif size == 10:
-        ql_data.append(import_pickle_data("10Agents/Output_Data/QLearning_GReward"))
-        ql_data.append(import_pickle_data("15Agents/Output_Data/QLearning_GReward"))
-        ql_data.append(import_pickle_data("20Agents/Output_Data/QLearning_GReward"))
-        ql_data.append(import_pickle_data("25Agents/Output_Data/QLearning_GReward"))
-        ql_data.append(import_pickle_data("30Agents/Output_Data/QLearning_GReward"))
-    for i in range(n_tests):
-        avg_data = np.mean(ql_data[i], axis=0)
-        ql_rewards.append(avg_data[-1])
 
     # Global Reward Data ---------------------------------------------------------
     g_rewards = []
     g_data = []
-    if size == 8:
-        g_data.append(import_pickle_data("5Agents/Output_Data/Global_Rewards"))
-        g_data.append(import_pickle_data("8Agents/Output_Data/Global_Rewards"))
-        g_data.append(import_pickle_data("10Agents/Output_Data/Global_Rewards"))
-        g_data.append(import_pickle_data("12Agents/Output_Data/Global_Rewards"))
-        g_data.append(import_pickle_data("15Agents/Output_Data/Global_Rewards"))
-        g_data.append(import_pickle_data("18Agents/Output_Data/Global_Rewards"))
-        g_data.append(import_pickle_data("20Agents/Output_Data/Global_Rewards"))
-    elif size == 10:
-        g_data.append(import_pickle_data("10Agents/Output_Data/Global_Rewards"))
-        g_data.append(import_pickle_data("15Agents/Output_Data/Global_Rewards"))
-        g_data.append(import_pickle_data("20Agents/Output_Data/Global_Rewards"))
-        g_data.append(import_pickle_data("25Agents/Output_Data/Global_Rewards"))
-        g_data.append(import_pickle_data("30Agents/Output_Data/Global_Rewards"))
-    for i in range(n_tests):
-        avg_data = np.mean(g_data[i][:], axis=0)
-        g_rewards.append(avg_data[-1])
 
     # Difference Reward Data --------------------------------------------------------
     d_rewards = []
     d_data = []
-    if size == 8:
-        d_data.append(import_pickle_data("5Agents/Output_Data/Difference_Rewards"))
-        d_data.append(import_pickle_data("8Agents/Output_Data/Difference_Rewards"))
-        d_data.append(import_pickle_data("10Agents/Output_Data/Difference_Rewards"))
-        d_data.append(import_pickle_data("12Agents/Output_Data/Difference_Rewards"))
-        d_data.append(import_pickle_data("15Agents/Output_Data/Difference_Rewards"))
-        d_data.append(import_pickle_data("18Agents/Output_Data/Difference_Rewards"))
-        d_data.append(import_pickle_data("20Agents/Output_Data/Difference_Rewards"))
-    elif size == 10:
-        d_data.append(import_pickle_data("10Agents/Output_Data/Difference_Rewards"))
-        d_data.append(import_pickle_data("15Agents/Output_Data/Difference_Rewards"))
-        d_data.append(import_pickle_data("20Agents/Output_Data/Difference_Rewards"))
-        d_data.append(import_pickle_data("25Agents/Output_Data/Difference_Rewards"))
-        d_data.append(import_pickle_data("30Agents/Output_Data/Difference_Rewards"))
-    for i in range(n_tests):
-        avg_data = np.mean(d_data[i][:], axis=0)
-        d_rewards.append(avg_data[-1])
 
     # PBRS Data -----------------------------------------------------------------------
     pbrs_rewards = []
     pbrs_data = []
-    if size == 8:
-        pbrs_data.append(import_pickle_data("5Agents/Output_Data/PBRS_Rewards"))
-        pbrs_data.append(import_pickle_data("8Agents/Output_Data/PBRS_Rewards"))
-        pbrs_data.append(import_pickle_data("10Agents/Output_Data/PBRS_Rewards"))
-        pbrs_data.append(import_pickle_data("12Agents/Output_Data/PBRS_Rewards"))
-        pbrs_data.append(import_pickle_data("15Agents/Output_Data/PBRS_Rewards"))
-        pbrs_data.append(import_pickle_data("18Agents/Output_Data/PBRS_Rewards"))
-        pbrs_data.append(import_pickle_data("20Agents/Output_Data/PBRS_Rewards"))
-    elif size == 10:
-        pbrs_data.append(import_pickle_data("10Agents/Output_Data/PBRS_Rewards"))
-        pbrs_data.append(import_pickle_data("15Agents/Output_Data/PBRS_Rewards"))
-        pbrs_data.append(import_pickle_data("20Agents/Output_Data/PBRS_Rewards"))
-        pbrs_data.append(import_pickle_data("25Agents/Output_Data/PBRS_Rewards"))
-        pbrs_data.append(import_pickle_data("30Agents/Output_Data/PBRS_Rewards"))
-    for i in range(n_tests):
-        avg_data = np.mean(pbrs_data[i][:], axis=0)
-        pbrs_rewards.append(avg_data[-1])
 
     # CFL Data ------------------------------------------------------------------------
     cfl_rewards = []
     cfl_data = []
-    if size == 8:
-        cfl_data.append(import_pickle_data("5Agents/Output_Data/CFL_Rewards"))
-        cfl_data.append(import_pickle_data("8Agents/Output_Data/CFL_Rewards"))
-        cfl_data.append(import_pickle_data("10Agents/Output_Data/CFL_Rewards"))
-        cfl_data.append(import_pickle_data("12Agents/Output_Data/CFL_Rewards"))
-        cfl_data.append(import_pickle_data("15Agents/Output_Data/CFL_Rewards"))
-        cfl_data.append(import_pickle_data("18Agents/Output_Data/CFL_Rewards"))
-        cfl_data.append(import_pickle_data("20Agents/Output_Data/CFL_Rewards"))
-    elif size == 10:
-        cfl_data.append(import_pickle_data("10Agents/Output_Data/CFL_Rewards"))
-        cfl_data.append(import_pickle_data("15Agents/Output_Data/CFL_Rewards"))
-        cfl_data.append(import_pickle_data("20Agents/Output_Data/CFL_Rewards"))
-        cfl_data.append(import_pickle_data("25Agents/Output_Data/CFL_Rewards"))
-        cfl_data.append(import_pickle_data("30Agents/Output_Data/CFL_Rewards"))
-    for i in range(n_tests):
-        avg_data = np.mean(cfl_data[i][:], axis=0)
-        cfl_rewards.append(avg_data[-1])
 
     # DRiP Data ------------------------------------------------------------------------
     drip_rewards = []
     drip_data = []
-    if size == 8:
-        drip_data.append(import_pickle_data("5Agents/Output_Data/DRIP_Rewards"))
-        drip_data.append(import_pickle_data("8Agents/Output_Data/DRIP_Rewards"))
-        drip_data.append(import_pickle_data("10Agents/Output_Data/DRIP_Rewards"))
-        drip_data.append(import_pickle_data("12Agents/Output_Data/DRIP_Rewards"))
-        drip_data.append(import_pickle_data("15Agents/Output_Data/DRIP_Rewards"))
-        drip_data.append(import_pickle_data("18Agents/Output_Data/DRIP_Rewards"))
-        drip_data.append(import_pickle_data("20Agents/Output_Data/CFL_Rewards"))
-    elif size == 10:
-        drip_data.append(import_pickle_data("10Agents/Output_Data/DRIP_Rewards"))
-        drip_data.append(import_pickle_data("15Agents/Output_Data/DRIP_Rewards"))
-        drip_data.append(import_pickle_data("20Agents/Output_Data/DRIP_Rewards"))
-        drip_data.append(import_pickle_data("25Agents/Output_Data/DRIP_Rewards"))
-        drip_data.append(import_pickle_data("30Agents/Output_Data/DRIP_Rewards"))
-    for i in range(n_tests):
-        avg_data = np.mean(drip_data[i][:], axis=0)
-        drip_rewards.append(avg_data[-1])
 
     # CFL-P Data ------------------------------------------------------------------------
     cflp_rewards = []
     cflp_data = []
-    if size == 8:
-        cflp_data.append(import_pickle_data("5Agents/Output_Data/CFLP_Rewards"))
-        cflp_data.append(import_pickle_data("8Agents/Output_Data/CFLP_Rewards"))
-        cflp_data.append(import_pickle_data("10Agents/Output_Data/CFLP_Rewards"))
-        cflp_data.append(import_pickle_data("12Agents/Output_Data/CFLP_Rewards"))
-        cflp_data.append(import_pickle_data("15Agents/Output_Data/CFLP_Rewards"))
-        cflp_data.append(import_pickle_data("18Agents/Output_Data/CFLP_Rewards"))
-        cflp_data.append(import_pickle_data("20Agents/Output_Data/CFLp_Rewards"))
-    elif size == 10:
-        cflp_data.append(import_pickle_data("10Agents/Output_Data/CFLP_Rewards"))
-        cflp_data.append(import_pickle_data("15Agents/Output_Data/CFLP_Rewards"))
-        cflp_data.append(import_pickle_data("20Agents/Output_Data/CFLP_Rewards"))
-        cflp_data.append(import_pickle_data("25Agents/Output_Data/CFLP_Rewards"))
-        cflp_data.append(import_pickle_data("30Agents/Output_Data/CFLP_Rewards"))
+
+    # Sort the data
+    for na in x_axis:
+        ql_data.append(import_pickle_data(f"{na}Agents/Output_Data/QLearning_GReward"))
+        g_data.append(import_pickle_data(f"{na}Agents/Output_Data/Global_Rewards"))
+        d_data.append(import_pickle_data(f"{na}Agents/Output_Data/Difference_Rewards"))
+        pbrs_data.append(import_pickle_data(f"{na}Agents/Output_Data/PBRS_Rewards"))
+        cfl_data.append(import_pickle_data(f"{na}Agents/Output_Data/CFL_Rewards"))
+        drip_data.append(import_pickle_data(f"{na}Agents/Output_Data/DRIP_Rewards"))
+        cflp_data.append(import_pickle_data(f"{na}Agents/Output_Data/CFLP_Rewards"))
+
+    # Average the data
     for i in range(n_tests):
-        avg_data = np.mean(cflp_data[i][:], axis=0)
-        cflp_rewards.append(avg_data[-1])
+        ql_avg_data = np.mean(ql_data[i], axis=0)
+        ql_rewards.append(ql_avg_data[-1])
+        g_avg_data = np.mean(g_data[i][:], axis=0)
+        g_rewards.append(g_avg_data[-1])
+        d_avg_data = np.mean(d_data[i][:], axis=0)
+        d_rewards.append(d_avg_data[-1])
+        pbrs_avg_data = np.mean(pbrs_data[i][:], axis=0)
+        pbrs_rewards.append(pbrs_avg_data[-1])
+        cfl_avg_data = np.mean(cfl_data[i][:], axis=0)
+        cfl_rewards.append(cfl_avg_data[-1])
+        drip_avg_data = np.mean(drip_data[i][:], axis=0)
+        drip_rewards.append(drip_avg_data[-1])
+        cflp_avg_data = np.mean(cflp_data[i][:], axis=0)
+        cflp_rewards.append(cflp_avg_data[-1])
 
     # Make Plot -------------------------------------------------------------------------
     plt.plot(x_axis, ql_rewards, '-s', color='black')
@@ -198,12 +106,11 @@ def create_scaling_plot(n_tests, size, x_axis):
 
 
 if __name__ == "__main__":
-    n_epochs = 2000
+    n_epochs = 3000
     size = int(sys.argv[1])
     x_axis = []
     if size == 8:
-        n_tests = 7
-        x_axis = [4, 5, 6, 7, 8, 9, 10]
+        x_axis = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
     elif size == 10:
         x_axis = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
     n_tests = len(x_axis)
