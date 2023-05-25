@@ -142,7 +142,7 @@ def create_learning_curve(n_agents, n_epochs, size, sruns):
 
 
 if __name__ == "__main__":
-    n_epochs = 3000
+    n_epochs = 5000
     s_runs = 30
     n_agents = int(sys.argv[1])
     size = int(sys.argv[2])

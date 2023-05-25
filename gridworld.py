@@ -66,7 +66,7 @@ class GridWorld:
 
         self.save_configuration()
 
-    def create_center_world(self, n_agents, n_targets, n_steps):
+    def create_center_world(self, n_agents, n_targets, min_dist_center):
         """
         Create Gridworld where agents all start in the center
         """
@@ -80,7 +80,7 @@ class GridWorld:
             y = random.randint(0, self.height - 1)
             dist_to_center = abs(x - center_x) + abs(y - center_y)
 
-            while dist_to_center != int(self.width-1) or [x, y] in self.targets:
+            while dist_to_center < min_dist_center or [x, y] in self.targets:
                 x = random.randint(0, self.width - 1)
                 y = random.randint(0, self.height - 1)
                 dist_to_center = abs(x - center_x) + abs(y - center_y)
@@ -96,7 +96,7 @@ class GridWorld:
             dist_to_center = abs(x - center_x) + abs(y - center_y)
 
             # Make sure targets are not placed on top of each other
-            while [x, y] in self.targets or dist_to_center > self.width - 3 or dist_to_center == 0:
+            while [x, y] in self.targets or dist_to_center >= min_dist_center - 3 or dist_to_center == 0:
                 x = random.randint(2, self.width - 2)
                 y = random.randint(2, self.height - 2)
                 dist_to_center = abs(x - center_x) + abs(y - center_y)
